@@ -2,13 +2,17 @@
   "name": "ikkfms-app",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron": "NODE_ENV=development electron .",
+    "dev:electron": "concurrently \"next dev\" \"sleep 3 && NODE_ENV=development electron .\""
   },
   "dependencies": {
+    "better-sqlite3": "^11.7.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
@@ -16,6 +20,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.1.2",
+    "electron": "^33.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4"
