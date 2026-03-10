@@ -32,9 +32,9 @@ export default async function FamiliesPage({ searchParams }) {
         </Suspense>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-          <thead className="bg-zinc-50 dark:bg-zinc-900">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+        <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
+          <thead className="bg-zinc-50 dark:bg-zinc-800">
             <tr>
               <th className="th">No</th>
               <th className="th">Nama Keluarga</th>
@@ -45,7 +45,7 @@ export default async function FamiliesPage({ searchParams }) {
               <th className="th">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 bg-white dark:divide-zinc-800 dark:bg-zinc-950">
+          <tbody className="divide-y divide-zinc-100 bg-white dark:divide-zinc-700 dark:bg-zinc-850">
             {families.length === 0 ? (
               <tr>
                 <td
@@ -61,7 +61,7 @@ export default async function FamiliesPage({ searchParams }) {
               families.map((family, index) => (
                 <tr
                   key={family.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
                   <td className="td text-center">{index + 1}</td>
                   <td className="td font-medium">{family.family_name}</td>

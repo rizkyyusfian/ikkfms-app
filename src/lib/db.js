@@ -2,8 +2,11 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DB_DIR, "ikkfms.db");
+// In packaged Electron, DB path is passed via env var.
+// In dev, use data/ in the project root.
+const DB_PATH =
+  process.env.IKKFMS_DB_PATH || path.join(process.cwd(), "data", "ikkfms.db");
+const DB_DIR = path.dirname(DB_PATH);
 
 // Ensure data directory exists
 if (!fs.existsSync(DB_DIR)) {

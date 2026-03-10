@@ -27,7 +27,7 @@ export default async function DashboardPage() {
           description="Anggota keluarga terdaftar"
           href="/members/search"
         />
-        <div className="flex flex-col justify-center rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="flex flex-col justify-center rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-center dark:border-zinc-600 dark:bg-zinc-850">
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Mulai tambah data
           </p>
@@ -47,7 +47,7 @@ function StatCard({ title, value, description, href }) {
   return (
     <Link
       href={href}
-      className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-850"
     >
       <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
         {title}

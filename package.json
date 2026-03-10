@@ -9,7 +9,13 @@
     "start": "next start",
     "lint": "eslint",
     "electron": "NODE_ENV=development electron .",
-    "dev:electron": "concurrently \"next dev\" \"sleep 3 && NODE_ENV=development electron .\""
+    "dev:electron": "concurrently \"next dev\" \"sleep 3 && NODE_ENV=development electron .\"",
+    "seed": "node scripts/seed.mjs",
+    "predist": "npm rebuild better-sqlite3",
+    "dist": "npm run build && node scripts/prepare-standalone.js && electron-builder",
+    "dist:win": "npm run build && node scripts/prepare-standalone.js && electron-builder --win",
+    "dist:mac": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac",
+    "dist:all": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac --win"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
@@ -22,8 +28,48 @@
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^9.1.2",
     "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4"
+  },
+  "build": {
+    "appId": "com.ikkfms.app",
+    "productName": "IKKFMS",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-standalone/",
+        "to": "standalone",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "data/",
+        "to": "data",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/logo_ikkfms.jpeg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/logo_ikkfms.jpeg"
+    }
   }
 }

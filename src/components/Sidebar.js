@@ -1,18 +1,23 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       {/* Logo / Title */}
-      <div className="flex h-16 items-center gap-2 border-b border-zinc-200 px-5 dark:border-zinc-800">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-          IK
-        </div>
+      <div className="flex h-16 items-center gap-3 border-b border-zinc-200 px-4 dark:border-zinc-700">
+        <Image
+          src="/logo_ikkfms.jpeg"
+          alt="Logo IKKFMS"
+          width={36}
+          height={36}
+          className="rounded-lg object-cover"
+        />
         <div>
           <p className="text-sm font-bold leading-tight text-zinc-900 dark:text-zinc-100">
             IKKFMS
           </p>
-          <p className="text-[10px] leading-tight text-zinc-500">
+          <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">
             Pendataan Keluarga
           </p>
         </div>
@@ -29,7 +34,7 @@ export default function Sidebar() {
         />
       </nav>
 
-      <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-800">
+      <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-700">
         <p className="text-[10px] text-zinc-400">IKKFMS App v1.0</p>
       </div>
     </aside>
@@ -40,7 +45,7 @@ function NavLink({ href, label, icon: Icon }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
     >
       <Icon />
       {label}
