@@ -5,20 +5,20 @@ export default function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
       {/* Logo / Title */}
-      <div className="flex h-16 items-center gap-3 border-b border-zinc-200 px-4 dark:border-zinc-700">
+      <div className="flex h-20 items-center gap-3 border-b border-zinc-200 px-4 dark:border-zinc-700">
         <Image
           src="/logo_ikkfms.jpeg"
           alt="Logo IKKFMS"
-          width={36}
-          height={36}
+          width={52}
+          height={52}
           className="rounded-lg object-cover"
         />
         <div>
           <p className="text-sm font-bold leading-tight text-zinc-900 dark:text-zinc-100">
-            IKKFMS
+            IKKFMS-APP
           </p>
           <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">
-            Pendataan Keluarga
+            Pendataan Keluarga IKKFMS
           </p>
         </div>
       </div>
@@ -34,8 +34,15 @@ export default function Sidebar() {
         />
       </nav>
 
-      <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-700">
-        <p className="text-[10px] text-zinc-400">IKKFMS App v1.0</p>
+      <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-700 text-center">
+        <a
+          href="https://rizkyyusfian.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+        >
+          &copy; MRYY 2026
+        </a>
       </div>
     </aside>
   );

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getFamily } from "@/lib/actions";
 import DeleteFamilyButton from "@/components/DeleteFamilyButton";
 import DeleteMemberButton from "@/components/DeleteMemberButton";
+import ExportButtons from "@/components/ExportButtons";
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -20,9 +21,6 @@ export default async function FamilyDetailPage({ params }) {
 
   if (!family) notFound();
 
-  const children = family.members.filter((m) => m.family_status === "Anak");
-  const otherMembers = family.members.filter((m) => m.family_status !== "Anak");
-
   return (
     <div>
       {/* Header */}
@@ -39,6 +37,10 @@ export default async function FamilyDetailPage({ params }) {
           </h1>
         </div>
         <div className="flex gap-2">
+          <ExportButtons
+            families={[family]}
+            fileNamePrefix={`Keluarga_${family.family_name}_IKKFMS`}
+          />
           <Link href={`/families/${id}/edit`} className="btn-secondary">
             Edit
           </Link>
@@ -96,10 +98,15 @@ export default async function FamilyDetailPage({ params }) {
                   <th className="th">No</th>
                   <th className="th">NIK</th>
                   <th className="th">Nama</th>
-                  <th className="th">TTL</th>
+                  <th className="th">Tempat Lahir</th>
+                  <th className="th">Tanggal Lahir</th>
                   <th className="th">L/P</th>
                   <th className="th">Status</th>
+                  <th className="th">Urutan Anak</th>
                   <th className="th">Pekerjaan</th>
+                  <th className="th">Pendidikan</th>
+                  <th className="th">Telepon</th>
+                  <th className="th">Dibuat</th>
                   <th className="th">Aksi</th>
                 </tr>
               </thead>
@@ -112,19 +119,27 @@ export default async function FamilyDetailPage({ params }) {
                     <td className="td text-center">{index + 1}</td>
                     <td className="td font-mono text-xs">{member.nik}</td>
                     <td className="td font-medium">{member.name}</td>
+                    <td className="td text-xs">{member.birth_place || "-"}</td>
                     <td className="td text-xs">
-                      {formatBirthInfo(member.birth_place, member.birth_date)}
+                      {formatDate(member.birth_date)}
                     </td>
                     <td className="td text-center">
                       {member.gender === "Laki-laki" ? "L" : "P"}
                     </td>
                     <td className="td">
                       <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium dark:bg-zinc-800">
-                        {member.family_status}
-                        {member.child_order ? ` ke-${member.child_order}` : ""}
+                        {member.family_status || "-"}
                       </span>
                     </td>
+                    <td className="td text-center text-xs">
+                      {member.child_order || "-"}
+                    </td>
                     <td className="td text-xs">{member.job || "-"}</td>
+                    <td className="td text-xs">{member.education || "-"}</td>
+                    <td className="td text-xs">{member.phone || "-"}</td>
+                    <td className="td text-xs">
+                      {formatDate(member.created_at)}
+                    </td>
                     <td className="td">
                       <div className="flex gap-1">
                         <Link
@@ -168,15 +183,16 @@ function InfoItem({ label, value, mono = false }) {
 function formatBirthInfo(place, date) {
   const parts = [];
   if (place) parts.push(place);
-  if (date) {
-    const d = new Date(date);
-    parts.push(
-      d.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    );
-  }
-  return parts.join(", ") || null;
+  if (date) parts.push(formatDate(date));
+  return parts.join(", ") || "-";
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "-";
+  const d = new Date(dateString);
+  return d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }

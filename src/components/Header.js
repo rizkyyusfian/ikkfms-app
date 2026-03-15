@@ -23,7 +23,7 @@ export default function Header() {
   return (
     <header className="fixed top-0 right-0 left-60 z-20 flex h-14 items-center justify-between border-b border-zinc-200 bg-white/80 px-8 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/80">
       <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-        Ikatan Kerukunan Keluarga Feto Mone Sorong
+        Sistem Informarsi Ikatan Kerukunan Keluarga Feto Mone Sorong
       </p>
 
       <button

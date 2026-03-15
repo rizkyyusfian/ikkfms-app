@@ -35,6 +35,42 @@ export async function getFamilies(search = "") {
     .all();
 }
 
+export async function getFamiliesWithMembers(search = "") {
+  const db = getDb();
+  const families = await getFamilies(search);
+
+  if (families.length === 0) return [];
+
+  const familyIds = families.map((family) => family.id);
+  const placeholders = familyIds.map(() => "?").join(",");
+
+  const members = db
+    .prepare(
+      `
+      SELECT *
+      FROM members
+      WHERE family_id IN (${placeholders})
+      ORDER BY family_id ASC,
+        CASE WHEN child_order IS NULL THEN 9999 ELSE child_order END ASC,
+        name ASC
+    `,
+    )
+    .all(...familyIds);
+
+  const memberMap = new Map();
+  for (const member of members) {
+    if (!memberMap.has(member.family_id)) {
+      memberMap.set(member.family_id, []);
+    }
+    memberMap.get(member.family_id).push(member);
+  }
+
+  return families.map((family) => ({
+    ...family,
+    members: memberMap.get(family.id) || [],
+  }));
+}
+
 export async function getFamily(id) {
   const db = getDb();
   const family = db.prepare("SELECT * FROM families WHERE id = ?").get(id);
@@ -231,5 +267,82 @@ export async function getStats() {
   const memberCount = db
     .prepare("SELECT COUNT(*) as count FROM members")
     .get().count;
-  return { familyCount, memberCount };
+
+  const totalPeople = familyCount + memberCount;
+
+  const peopleByGenderRows = db
+    .prepare(
+      `
+      SELECT gender, COUNT(*) as count
+      FROM (
+        SELECT COALESCE(NULLIF(head_gender, ''), 'Tidak diketahui') as gender FROM families
+        UNION ALL
+        SELECT COALESCE(NULLIF(gender, ''), 'Tidak diketahui') as gender FROM members
+      )
+      GROUP BY gender
+      ORDER BY count DESC
+    `,
+    )
+    .all();
+
+  const educationRows = db
+    .prepare(
+      `
+      SELECT education, COUNT(*) as count
+      FROM (
+        SELECT COALESCE(NULLIF(head_education, ''), 'Tidak diketahui') as education FROM families
+        UNION ALL
+        SELECT COALESCE(NULLIF(education, ''), 'Tidak diketahui') as education FROM members
+      )
+      GROUP BY education
+      ORDER BY count DESC
+    `,
+    )
+    .all();
+
+  const familyStatusRows = db
+    .prepare(
+      `
+      SELECT family_status as status, COUNT(*) as count
+      FROM members
+      GROUP BY family_status
+      ORDER BY count DESC
+    `,
+    )
+    .all();
+
+  const recentFamilyCount = db
+    .prepare(
+      `
+      SELECT COUNT(*) as count
+      FROM families
+      WHERE datetime(created_at) >= datetime('now', '-30 day', 'localtime')
+    `,
+    )
+    .get().count;
+
+  const recentMemberCount = db
+    .prepare(
+      `
+      SELECT COUNT(*) as count
+      FROM members
+      WHERE datetime(created_at) >= datetime('now', '-30 day', 'localtime')
+    `,
+    )
+    .get().count;
+
+  const averagePeoplePerFamily =
+    familyCount > 0 ? Number((totalPeople / familyCount).toFixed(2)) : 0;
+
+  return {
+    familyCount,
+    memberCount,
+    totalPeople,
+    averagePeoplePerFamily,
+    peopleByGender: peopleByGenderRows,
+    educationStats: educationRows,
+    familyStatusStats: familyStatusRows,
+    recentFamilyCount,
+    recentMemberCount,
+  };
 }

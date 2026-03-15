@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getFamilies } from "@/lib/actions";
+import { getFamiliesWithMembers } from "@/lib/actions";
 import SearchBar from "@/components/SearchBar";
+import ExportButtons from "@/components/ExportButtons";
 
 export const metadata = { title: "Data Keluarga - IKKFMS" };
 
 export default async function FamiliesPage({ searchParams }) {
   const params = await searchParams;
   const query = params?.q || "";
-  const families = await getFamilies(query);
+  const families = await getFamiliesWithMembers(query);
 
   return (
     <div>
@@ -21,9 +22,12 @@ export default async function FamiliesPage({ searchParams }) {
             {families.length} keluarga terdaftar
           </p>
         </div>
-        <Link href="/families/new" className="btn-primary">
-          + Tambah Keluarga
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButtons families={families} />
+          <Link href="/families/new" className="btn-primary">
+            + Tambah Keluarga
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -39,9 +43,16 @@ export default async function FamiliesPage({ searchParams }) {
               <th className="th">No</th>
               <th className="th">Nama Keluarga</th>
               <th className="th">NIK Kepala</th>
-              <th className="th">Kepala Keluarga</th>
+              <th className="th">Nama Kepala</th>
+              {/* <th className="th">TTL Kepala</th> */}
+              <th className="th">L/P</th>
+              <th className="th">Pekerjaan</th>
+              <th className="th">Pendidikan</th>
+              <th className="th">Telepon</th>
+              <th className="th">Nama Pasangan</th>
               <th className="th">Alamat</th>
               <th className="th">Anggota</th>
+              {/* <th className="th">Dibuat</th> */}
               <th className="th">Aksi</th>
             </tr>
           </thead>
@@ -49,7 +60,7 @@ export default async function FamiliesPage({ searchParams }) {
             {families.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={14}
                   className="py-12 text-center text-sm text-zinc-400"
                 >
                   {query
@@ -67,10 +78,30 @@ export default async function FamiliesPage({ searchParams }) {
                   <td className="td font-medium">{family.family_name}</td>
                   <td className="td font-mono text-xs">{family.head_nik}</td>
                   <td className="td">{family.head_name}</td>
-                  <td className="td max-w-[200px] truncate">
+                  {/* <td className="td text-xs">
+                    {formatBirthInfo(
+                      family.head_birth_place,
+                      family.head_birth_date,
+                    )}
+                  </td> */}
+                  <td className="td text-center">
+                    {family.head_gender === "Laki-laki"
+                      ? "L"
+                      : family.head_gender === "Perempuan"
+                        ? "P"
+                        : "-"}
+                  </td>
+                  <td className="td">{family.head_job || "-"}</td>
+                  <td className="td">{family.head_education || "-"}</td>
+                  <td className="td">{family.head_phone || "-"}</td>
+                  <td className="td">{family.wife_name || "-"}</td>
+                  <td className="td whitespace-normal min-w-60">
                     {family.home_address || "-"}
                   </td>
                   <td className="td text-center">{family.member_count}</td>
+                  {/* <td className="td text-xs">
+                    {formatDateTime(family.created_at)}
+                  </td> */}
                   <td className="td">
                     <Link
                       href={`/families/${family.id}`}
@@ -87,4 +118,30 @@ export default async function FamiliesPage({ searchParams }) {
       </div>
     </div>
   );
+}
+
+function formatBirthInfo(place, date) {
+  const parts = [];
+  if (place) parts.push(place);
+  if (date) {
+    const d = new Date(date);
+    parts.push(
+      d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    );
+  }
+  return parts.join(", ") || "-";
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return "-";
+  const d = new Date(dateString);
+  return d.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
