@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getStats } from "@/lib/actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const stats = await getStats();
   const topEducation = stats.educationStats.slice(0, 8);

@@ -111,6 +111,7 @@ export async function createFamily(formData) {
   ).run(data);
 
   revalidatePath("/families");
+  revalidatePath("/");
 }
 
 export async function updateFamily(id, formData) {
@@ -144,12 +145,14 @@ export async function updateFamily(id, formData) {
 
   revalidatePath("/families");
   revalidatePath(`/families/${id}`);
+  revalidatePath("/");
 }
 
 export async function deleteFamily(id) {
   const db = getDb();
   db.prepare("DELETE FROM families WHERE id = ?").run(id);
   revalidatePath("/families");
+  revalidatePath("/");
 }
 
 // ─── MEMBERS ────────────────────────────────────────────────
@@ -197,6 +200,7 @@ export async function createMember(familyId, formData) {
   ).run(data);
 
   revalidatePath(`/families/${familyId}`);
+  revalidatePath("/");
 }
 
 export async function updateMember(id, familyId, formData) {
@@ -229,12 +233,14 @@ export async function updateMember(id, familyId, formData) {
   ).run(data);
 
   revalidatePath(`/families/${familyId}`);
+  revalidatePath("/");
 }
 
 export async function deleteMember(id, familyId) {
   const db = getDb();
   db.prepare("DELETE FROM members WHERE id = ?").run(id);
   revalidatePath(`/families/${familyId}`);
+  revalidatePath("/");
 }
 
 // ─── SEARCH ─────────────────────────────────────────────────
