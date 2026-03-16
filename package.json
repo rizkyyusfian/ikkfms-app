@@ -66,7 +66,7 @@
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false,
-      "icon": "public/logo_ikkfms.jpeg"
+      "icon": "assets/icons/app.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -74,7 +74,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "public/logo_ikkfms.jpeg"
+      "icon": "assets/icons/app.icns"
     }
   }
 }
