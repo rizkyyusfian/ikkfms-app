@@ -43,7 +43,10 @@ copyRecursive(PUBLIC_SRC, path.join(DIST, "public"));
 // the same Node version that native modules were compiled for.
 // This avoids ABI mismatch with Electron's embedded Node.
 const NODE_BIN_SRC = process.execPath;
-const NODE_BIN_DEST = path.join(DIST, "node-bin");
+const NODE_BIN_DEST = path.join(
+  DIST,
+  process.platform === "win32" ? "node-bin.exe" : "node-bin",
+);
 console.log(`Copying node binary from ${NODE_BIN_SRC}...`);
 fs.copyFileSync(NODE_BIN_SRC, NODE_BIN_DEST);
 fs.chmodSync(NODE_BIN_DEST, 0o755);

@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const net = require("net");
+const fs = require("fs");
 
 const isDev = process.env.NODE_ENV === "development";
 const PORT = 3000;
@@ -9,6 +10,16 @@ const URL = `http://localhost:${PORT}`;
 
 let mainWindow;
 let serverProcess;
+
+function getNodeBinPath() {
+  const standaloneDir = path.join(process.resourcesPath, "standalone");
+  const platformBinName = process.platform === "win32" ? "node-bin.exe" : "node-bin";
+  const platformBinPath = path.join(standaloneDir, platformBinName);
+  const legacyBinPath = path.join(standaloneDir, "node-bin");
+
+  if (fs.existsSync(platformBinPath)) return platformBinPath;
+  return legacyBinPath;
+}
 
 // Start the standalone Next.js server in production
 function startNextServer() {
@@ -26,7 +37,7 @@ function startNextServer() {
 
     // Use the bundled Node.js binary (not Electron's embedded Node)
     // to avoid ABI mismatch with native modules like better-sqlite3.
-    const nodeBin = path.join(process.resourcesPath, "standalone", "node-bin");
+    const nodeBin = getNodeBinPath();
 
     serverProcess = spawn(nodeBin, [serverPath], {
       env: {
@@ -102,8 +113,10 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(async () => {
-  await startNextServer();
+app.whenReady().then(() => {
+  startNextServer().catch((err) => {
+    console.error("[electron] failed to start standalone server:", err);
+  });
   createWindow();
 
   app.on("activate", () => {
