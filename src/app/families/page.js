@@ -42,12 +42,9 @@ export default async function FamiliesPage({ searchParams }) {
             <tr>
               <th className="th">No</th>
               <th className="th">Nama Keluarga</th>
-              <th className="th">NIK Kepala</th>
               <th className="th">Nama Kepala</th>
               {/* <th className="th">TTL Kepala</th> */}
               <th className="th">L/P</th>
-              <th className="th">Pekerjaan</th>
-              <th className="th">Pendidikan</th>
               <th className="th">Telepon</th>
               <th className="th">Nama Pasangan</th>
               <th className="th">Alamat</th>
@@ -60,7 +57,7 @@ export default async function FamiliesPage({ searchParams }) {
             {families.length === 0 ? (
               <tr>
                 <td
-                  colSpan={14}
+                  colSpan={9}
                   className="py-12 text-center text-sm text-zinc-400"
                 >
                   {query
@@ -76,7 +73,6 @@ export default async function FamiliesPage({ searchParams }) {
                 >
                   <td className="td text-center">{index + 1}</td>
                   <td className="td font-medium">{family.family_name}</td>
-                  <td className="td font-mono text-xs">{family.head_nik}</td>
                   <td className="td">{family.head_name}</td>
                   {/* <td className="td text-xs">
                     {formatBirthInfo(
@@ -91,8 +87,6 @@ export default async function FamiliesPage({ searchParams }) {
                         ? "P"
                         : "-"}
                   </td>
-                  <td className="td">{family.head_job || "-"}</td>
-                  <td className="td">{family.head_education || "-"}</td>
                   <td className="td">{family.head_phone || "-"}</td>
                   <td className="td">{family.wife_name || "-"}</td>
                   <td className="td whitespace-normal min-w-60">

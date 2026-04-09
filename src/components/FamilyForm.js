@@ -45,7 +45,9 @@ export default function FamilyForm({ family = null }) {
     return errs;
   }
 
-  async function handleSubmit(formData) {
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const errs = validate(formData);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -64,7 +66,7 @@ export default function FamilyForm({ family = null }) {
   const spouseLabel = headGender === "Perempuan" ? "Nama Suami" : "Nama Istri";
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Family Name */}
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
