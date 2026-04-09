@@ -9,6 +9,23 @@ const STANDALONE_SRC = path.join(ROOT, ".next", "standalone");
 const STATIC_SRC = path.join(ROOT, ".next", "static");
 const PUBLIC_SRC = path.join(ROOT, "public");
 const DIST = path.join(ROOT, "dist-standalone");
+const TARGET_FLAG = "--target=";
+const targetArg = process.argv.find((arg) => arg.startsWith(TARGET_FLAG));
+const TARGET_PLATFORM = targetArg
+  ? targetArg.slice(TARGET_FLAG.length)
+  : process.platform;
+
+if (!["darwin", "win32", "linux"].includes(TARGET_PLATFORM)) {
+  throw new Error(
+    `Invalid target platform "${TARGET_PLATFORM}". Use darwin, win32, or linux.`,
+  );
+}
+
+if (TARGET_PLATFORM !== process.platform) {
+  throw new Error(
+    `Cross-platform packaging is not supported for this project (host: ${process.platform}, target: ${TARGET_PLATFORM}). Build the Windows package on Windows and macOS package on macOS.`,
+  );
+}
 
 function copyRecursive(src, dest) {
   if (!fs.existsSync(src)) return;
@@ -45,7 +62,7 @@ copyRecursive(PUBLIC_SRC, path.join(DIST, "public"));
 const NODE_BIN_SRC = process.execPath;
 const NODE_BIN_DEST = path.join(
   DIST,
-  process.platform === "win32" ? "node-bin.exe" : "node-bin",
+  TARGET_PLATFORM === "win32" ? "node-bin.exe" : "node-bin",
 );
 console.log(`Copying node binary from ${NODE_BIN_SRC}...`);
 fs.copyFileSync(NODE_BIN_SRC, NODE_BIN_DEST);

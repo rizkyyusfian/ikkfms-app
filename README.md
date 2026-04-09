@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Electron build notes
+
+- Use `npm run dist:mac` on macOS and `npm run dist:win` on Windows.
+- Cross-building between macOS and Windows is blocked for this app because the standalone bundle includes native binaries (`better-sqlite3` and bundled Node).
+- In production, app data is stored in Electron `userData` (not inside the installation directory).

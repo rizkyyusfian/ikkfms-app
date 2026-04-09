@@ -12,10 +12,12 @@
     "dev:electron": "concurrently \"next dev\" \"sleep 3 && NODE_ENV=development electron .\"",
     "seed": "node scripts/seed.mjs",
     "predist": "npm rebuild better-sqlite3",
+    "predist:win": "npm rebuild better-sqlite3",
+    "predist:mac": "npm rebuild better-sqlite3",
     "dist": "npm run build && node scripts/prepare-standalone.js && electron-builder",
-    "dist:win": "npm run build && node scripts/prepare-standalone.js && electron-builder --win",
-    "dist:mac": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac",
-    "dist:all": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac --win"
+    "dist:win": "npm run build && node scripts/prepare-standalone.js --target=win32 && electron-builder --win",
+    "dist:mac": "npm run build && node scripts/prepare-standalone.js --target=darwin && electron-builder --mac",
+    "dist:all": "node -e \"console.error('Use platform-specific CI jobs: run dist:mac on macOS and dist:win on Windows.'); process.exit(1)\""
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
