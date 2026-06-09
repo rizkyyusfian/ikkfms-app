@@ -5,14 +5,48 @@ const net = require("net");
 const fs = require("fs");
 
 const isDev = process.env.NODE_ENV === "development";
-const PORT = 3000;
+const DEFAULT_PORT = 3000;
 const HOST = "127.0.0.1";
-const URL = `http://${HOST}:${PORT}`;
 const STARTUP_TIMEOUT_MS = 30_000;
 const READY_POLL_INTERVAL_MS = 250;
+const SERVER_OUTPUT_LIMIT = 8_000;
 
 let mainWindow;
 let serverProcess;
+let serverPort = DEFAULT_PORT;
+
+function getServerUrl() {
+  return `http://${HOST}:${serverPort}`;
+}
+
+function findAvailablePort(preferredPort) {
+  return new Promise((resolve, reject) => {
+    const tester = net.createServer();
+
+    tester.once("error", (err) => {
+      if (err.code === "EADDRINUSE" || err.code === "EACCES") {
+        tester.listen(0, HOST);
+        return;
+      }
+      reject(err);
+    });
+
+    tester.once("listening", () => {
+      const address = tester.address();
+      const port =
+        address && typeof address === "object" ? address.port : preferredPort;
+      tester.close(() => resolve(port));
+    });
+
+    tester.listen(preferredPort, HOST);
+  });
+}
+
+function appendServerOutput(currentOutput, chunk) {
+  const nextOutput = `${currentOutput}${chunk}`;
+  if (nextOutput.length <= SERVER_OUTPUT_LIMIT) return nextOutput;
+  return nextOutput.slice(nextOutput.length - SERVER_OUTPUT_LIMIT);
+}
 
 function getNodeBinPath() {
   const standaloneDir = path.join(process.resourcesPath, "standalone");
@@ -90,94 +124,111 @@ function startNextServer() {
       return;
     }
 
-    const dbPath = getRuntimeDbPath();
-    let settled = false;
+    findAvailablePort(DEFAULT_PORT)
+      .then((port) => {
+        const dbPath = getRuntimeDbPath();
+        serverPort = port;
+        let settled = false;
+        let serverOutput = "";
 
-    const finish = (err) => {
-      if (settled) return;
-      settled = true;
-      if (err) {
-        if (serverProcess && !serverProcess.killed) {
-          serverProcess.kill();
-        }
-        reject(err);
-        return;
-      }
-      resolve();
-    };
+        const finish = (err) => {
+          if (settled) return;
+          settled = true;
+          if (err) {
+            if (serverProcess && !serverProcess.killed) {
+              serverProcess.kill();
+            }
+            reject(err);
+            return;
+          }
+          resolve();
+        };
 
-    serverProcess = spawn(nodeBin, [serverPath], {
-      env: {
-        ...process.env,
-        NODE_ENV: "production",
-        PORT: String(PORT),
-        HOSTNAME: HOST,
-        IKKFMS_DB_PATH: dbPath,
-      },
-      cwd: standaloneDir,
-      stdio: "pipe",
-      windowsHide: true,
-    });
+        serverProcess = spawn(nodeBin, [serverPath], {
+          env: {
+            ...process.env,
+            NODE_ENV: "production",
+            PORT: String(port),
+            HOSTNAME: HOST,
+            IKKFMS_DB_PATH: dbPath,
+          },
+          cwd: standaloneDir,
+          stdio: "pipe",
+          windowsHide: true,
+        });
 
-    serverProcess.stdout.on("data", (data) => {
-      console.log(`[next] ${data}`);
-    });
+        serverProcess.stdout.on("data", (data) => {
+          const output = data.toString();
+          serverOutput = appendServerOutput(serverOutput, output);
+          console.log(`[next] ${output}`);
+        });
 
-    serverProcess.stderr.on("data", (data) => {
-      console.error(`[next] ${data}`);
-    });
+        serverProcess.stderr.on("data", (data) => {
+          const output = data.toString();
+          serverOutput = appendServerOutput(serverOutput, output);
+          console.error(`[next] ${output}`);
+        });
 
-    serverProcess.once("error", (err) => {
-      finish(new Error(`Failed to launch standalone server: ${err.message}`));
-    });
+        serverProcess.once("error", (err) => {
+          finish(new Error(`Failed to launch standalone server: ${err.message}`));
+        });
 
-    serverProcess.once("exit", (code, signal) => {
-      const exitedBeforeReady = !settled;
-      serverProcess = null;
-      if (exitedBeforeReady) {
-        const reason = signal ? `signal ${signal}` : `code ${code}`;
-        finish(
-          new Error(
-            `Standalone server exited before becoming ready (${reason}).`,
-          ),
-        );
-      }
-    });
+        serverProcess.once("exit", (code, signal) => {
+          const exitedBeforeReady = !settled;
+          serverProcess = null;
+          if (exitedBeforeReady) {
+            const reason = signal ? `signal ${signal}` : `code ${code}`;
+            const outputDetails = serverOutput.trim()
+              ? `\n\nServer output:\n${serverOutput.trim()}`
+              : "";
+            finish(
+              new Error(
+                `Standalone server exited before becoming ready (${reason}).${outputDetails}`,
+              ),
+            );
+          }
+        });
 
-    const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+        const deadline = Date.now() + STARTUP_TIMEOUT_MS;
 
-    // Wait for server to be ready
-    const checkReady = () => {
-      if (settled) return;
-      if (Date.now() > deadline) {
-        finish(
-          new Error(
-            `Standalone server did not become ready within ${Math.round(
-              STARTUP_TIMEOUT_MS / 1000,
-            )} seconds.`,
-          ),
-        );
-        return;
-      }
+        // Wait for server to be ready
+        const checkReady = () => {
+          if (settled) return;
+          if (Date.now() > deadline) {
+            finish(
+              new Error(
+                `Standalone server did not become ready within ${Math.round(
+                  STARTUP_TIMEOUT_MS / 1000,
+                )} seconds.`,
+              ),
+            );
+            return;
+          }
 
-      const socket = new net.Socket();
-      socket.setTimeout(500);
-      socket.on("connect", () => {
-        socket.destroy();
-        finish();
-      });
-      socket.on("timeout", () => {
-        socket.destroy();
+          const socket = new net.Socket();
+          socket.setTimeout(500);
+          socket.on("connect", () => {
+            socket.destroy();
+            finish();
+          });
+          socket.on("timeout", () => {
+            socket.destroy();
+            setTimeout(checkReady, READY_POLL_INTERVAL_MS);
+          });
+          socket.on("error", () => {
+            socket.destroy();
+            setTimeout(checkReady, READY_POLL_INTERVAL_MS);
+          });
+          socket.connect(port, HOST);
+        };
+
         setTimeout(checkReady, READY_POLL_INTERVAL_MS);
+      })
+      .catch((err) => {
+        reject(
+          new Error(`Failed to find an available local port: ${err.message}`),
+        );
       });
-      socket.on("error", () => {
-        socket.destroy();
-        setTimeout(checkReady, READY_POLL_INTERVAL_MS);
-      });
-      socket.connect(PORT, HOST);
-    };
-
-    setTimeout(checkReady, READY_POLL_INTERVAL_MS);
   });
 }
 
@@ -274,14 +325,14 @@ async function bootstrap() {
   createWindow();
 
   if (isDev) {
-    await mainWindow.loadURL(URL);
+    await mainWindow.loadURL(getServerUrl());
     mainWindow.webContents.openDevTools();
     return;
   }
 
   await loadLoadingScreen();
   await startNextServer();
-  await mainWindow.loadURL(URL);
+  await mainWindow.loadURL(getServerUrl());
 }
 
 app.whenReady().then(async () => {

@@ -2,22 +2,22 @@
 
 import { useEffect, useState } from "react";
 
+function getInitialTheme() {
+  if (typeof window === "undefined") return "light";
+  return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+}
+
 export default function Header() {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark") {
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   function toggleTheme() {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
     localStorage.setItem("theme", next);
-    document.documentElement.classList.toggle("dark", next === "dark");
   }
 
   return (
