@@ -46,3 +46,7 @@ next-env.d.ts
 # electron-builder output
 /release/
 /dist-standalone/
+
+AGENTS.md
+GEMINI.md
+CLAUDE.md
