@@ -2,6 +2,50 @@
 
 import getDb from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { setSessionCookie, clearSessionCookie } from "@/lib/auth";
+import { redirect } from "next/navigation";
+
+// ─── AUTHENTICATION ACTIONS ───────────────────────────────────
+
+export async function loginAction(prevState, formData) {
+  try {
+    const username = formData.get("username")?.toString().trim();
+    const password = formData.get("password")?.toString();
+
+    if (!username || !password) {
+      return { error: "Username dan password wajib diisi." };
+    }
+
+    const db = getDb();
+    const userRes = await db.query(
+      "SELECT * FROM users WHERE username = $1 LIMIT 1",
+      [username]
+    );
+
+    const user = userRes.rows[0];
+    if (!user) {
+      return { error: "Username atau password salah." };
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return { error: "Username atau password salah." };
+    }
+
+    await setSessionCookie(username);
+    // Success redirect is handled by router or page reload
+    return { success: true };
+  } catch (error) {
+    console.error("Login error:", error);
+    return { error: "Terjadi kesalahan sistem. Silakan coba lagi." };
+  }
+}
+
+export async function logoutAction() {
+  await clearSessionCookie();
+  redirect("/login");
+}
 
 // ─── FAMILIES ───────────────────────────────────────────────
 
@@ -9,30 +53,29 @@ export async function getFamilies(search = "") {
   const db = getDb();
   if (search) {
     const pattern = `%${search}%`;
-    return db
-      .prepare(
-        `
-      SELECT f.*, COUNT(m.id) as member_count
+    const res = await db.query(
+      `
+      SELECT f.*, COUNT(m.id)::int as member_count
       FROM families f
       LEFT JOIN members m ON m.family_id = f.id
-      WHERE f.head_name LIKE ? OR f.head_nik LIKE ? OR f.family_name LIKE ?
+      WHERE f.head_name ILIKE $1 OR f.head_nik ILIKE $2 OR f.family_name ILIKE $3
       GROUP BY f.id
       ORDER BY f.created_at DESC
     `,
-      )
-      .all(pattern, pattern, pattern);
+      [pattern, pattern, pattern]
+    );
+    return res.rows;
   }
-  return db
-    .prepare(
-      `
-    SELECT f.*, COUNT(m.id) as member_count
+  const res = await db.query(
+    `
+    SELECT f.*, COUNT(m.id)::int as member_count
     FROM families f
     LEFT JOIN members m ON m.family_id = f.id
     GROUP BY f.id
     ORDER BY f.created_at DESC
-  `,
-    )
-    .all();
+  `
+  );
+  return res.rows;
 }
 
 export async function getFamiliesWithMembers(search = "") {
@@ -42,20 +85,18 @@ export async function getFamiliesWithMembers(search = "") {
   if (families.length === 0) return [];
 
   const familyIds = families.map((family) => family.id);
-  const placeholders = familyIds.map(() => "?").join(",");
-
-  const members = db
-    .prepare(
-      `
-      SELECT *
-      FROM members
-      WHERE family_id IN (${placeholders})
-      ORDER BY family_id ASC,
-        CASE WHEN child_order IS NULL THEN 9999 ELSE child_order END ASC,
-        name ASC
+  const res = await db.query(
+    `
+    SELECT *
+    FROM members
+    WHERE family_id = ANY($1::int[])
+    ORDER BY family_id ASC,
+      CASE WHEN child_order IS NULL THEN 9999 ELSE child_order END ASC,
+      name ASC
     `,
-    )
-    .all(...familyIds);
+    [familyIds]
+  );
+  const members = res.rows;
 
   const memberMap = new Map();
   for (const member of members) {
@@ -73,42 +114,42 @@ export async function getFamiliesWithMembers(search = "") {
 
 export async function getFamily(id) {
   const db = getDb();
-  const family = db.prepare("SELECT * FROM families WHERE id = ?").get(id);
+  const familyRes = await db.query("SELECT * FROM families WHERE id = $1", [id]);
+  const family = familyRes.rows[0];
   if (!family) return null;
 
-  const members = db
-    .prepare(
-      "SELECT * FROM members WHERE family_id = ? ORDER BY child_order ASC, name ASC",
-    )
-    .all(id);
+  const membersRes = await db.query(
+    "SELECT * FROM members WHERE family_id = $1 ORDER BY child_order ASC, name ASC",
+    [id]
+  );
 
-  return { ...family, members };
+  return { ...family, members: membersRes.rows };
 }
 
 export async function createFamily(formData) {
   const db = getDb();
-  const data = {
-    family_name: formData.get("family_name"),
-    head_nik: formData.get("head_nik"),
-    head_name: formData.get("head_name"),
-    head_birth_place: formData.get("head_birth_place"),
-    head_birth_date: formData.get("head_birth_date"),
-    head_gender: formData.get("head_gender"),
-    head_job: formData.get("head_job"),
-    head_education: formData.get("head_education"),
-    head_phone: formData.get("head_phone"),
-    home_address: formData.get("home_address"),
-    wife_name: formData.get("wife_name"),
-  };
-
-  db.prepare(
+  await db.query(
     `
-    INSERT INTO families (family_name, head_nik, head_name, head_birth_place, head_birth_date,
-      head_gender, head_job, head_education, head_phone, home_address, wife_name)
-    VALUES (@family_name, @head_nik, @head_name, @head_birth_place, @head_birth_date,
-      @head_gender, @head_job, @head_education, @head_phone, @home_address, @wife_name)
+    INSERT INTO families (
+      family_name, head_nik, head_name, head_birth_place, head_birth_date,
+      head_gender, head_job, head_education, head_phone, home_address, wife_name
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
   `,
-  ).run(data);
+    [
+      formData.get("family_name"),
+      formData.get("head_nik"),
+      formData.get("head_name"),
+      formData.get("head_birth_place"),
+      formData.get("head_birth_date") || null,
+      formData.get("head_gender"),
+      formData.get("head_job"),
+      formData.get("head_education"),
+      formData.get("head_phone"),
+      formData.get("home_address"),
+      formData.get("wife_name"),
+    ]
+  );
 
   revalidatePath("/families");
   revalidatePath("/");
@@ -116,32 +157,31 @@ export async function createFamily(formData) {
 
 export async function updateFamily(id, formData) {
   const db = getDb();
-  const data = {
-    id,
-    family_name: formData.get("family_name"),
-    head_nik: formData.get("head_nik"),
-    head_name: formData.get("head_name"),
-    head_birth_place: formData.get("head_birth_place"),
-    head_birth_date: formData.get("head_birth_date"),
-    head_gender: formData.get("head_gender"),
-    head_job: formData.get("head_job"),
-    head_education: formData.get("head_education"),
-    head_phone: formData.get("head_phone"),
-    home_address: formData.get("home_address"),
-    wife_name: formData.get("wife_name"),
-  };
-
-  db.prepare(
+  await db.query(
     `
     UPDATE families SET
-      family_name = @family_name, head_nik = @head_nik, head_name = @head_name,
-      head_birth_place = @head_birth_place, head_birth_date = @head_birth_date,
-      head_gender = @head_gender, head_job = @head_job, head_education = @head_education,
-      head_phone = @head_phone, home_address = @home_address, wife_name = @wife_name,
-      updated_at = datetime('now', 'localtime')
-    WHERE id = @id
+      family_name = $1, head_nik = $2, head_name = $3,
+      head_birth_place = $4, head_birth_date = $5,
+      head_gender = $6, head_job = $7, head_education = $8,
+      head_phone = $9, home_address = $10, wife_name = $11,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $12
   `,
-  ).run(data);
+    [
+      formData.get("family_name"),
+      formData.get("head_nik"),
+      formData.get("head_name"),
+      formData.get("head_birth_place"),
+      formData.get("head_birth_date") || null,
+      formData.get("head_gender"),
+      formData.get("head_job"),
+      formData.get("head_education"),
+      formData.get("head_phone"),
+      formData.get("home_address"),
+      formData.get("wife_name"),
+      id,
+    ]
+  );
 
   revalidatePath("/families");
   revalidatePath(`/families/${id}`);
@@ -150,7 +190,7 @@ export async function updateFamily(id, formData) {
 
 export async function deleteFamily(id) {
   const db = getDb();
-  db.prepare("DELETE FROM families WHERE id = ?").run(id);
+  await db.query("DELETE FROM families WHERE id = $1", [id]);
   revalidatePath("/families");
   revalidatePath("/");
 }
@@ -159,45 +199,42 @@ export async function deleteFamily(id) {
 
 export async function getMember(id) {
   const db = getDb();
-  const member = db
-    .prepare(
-      `
+  const res = await db.query(
+    `
     SELECT m.*, f.family_name, f.head_name
     FROM members m
     JOIN families f ON f.id = m.family_id
-    WHERE m.id = ?
+    WHERE m.id = $1
   `,
-    )
-    .get(id);
-  return member || null;
+    [id]
+  );
+  return res.rows[0] || null;
 }
 
 export async function createMember(familyId, formData) {
   const db = getDb();
-  const data = {
-    family_id: familyId,
-    nik: formData.get("nik"),
-    name: formData.get("name"),
-    birth_place: formData.get("birth_place"),
-    birth_date: formData.get("birth_date"),
-    gender: formData.get("gender"),
-    family_status: formData.get("family_status"),
-    job: formData.get("job"),
-    education: formData.get("education"),
-    phone: formData.get("phone"),
-    child_order: formData.get("child_order")
-      ? Number(formData.get("child_order"))
-      : null,
-  };
-
-  db.prepare(
+  await db.query(
     `
-    INSERT INTO members (family_id, nik, name, birth_place, birth_date,
-      gender, family_status, job, education, phone, child_order)
-    VALUES (@family_id, @nik, @name, @birth_place, @birth_date,
-      @gender, @family_status, @job, @education, @phone, @child_order)
+    INSERT INTO members (
+      family_id, nik, name, birth_place, birth_date,
+      gender, family_status, job, education, phone, child_order
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
   `,
-  ).run(data);
+    [
+      familyId,
+      formData.get("nik"),
+      formData.get("name"),
+      formData.get("birth_place"),
+      formData.get("birth_date") || null,
+      formData.get("gender"),
+      formData.get("family_status"),
+      formData.get("job"),
+      formData.get("education"),
+      formData.get("phone"),
+      formData.get("child_order") ? Number(formData.get("child_order")) : null,
+    ]
+  );
 
   revalidatePath(`/families/${familyId}`);
   revalidatePath("/");
@@ -205,32 +242,29 @@ export async function createMember(familyId, formData) {
 
 export async function updateMember(id, familyId, formData) {
   const db = getDb();
-  const data = {
-    id,
-    nik: formData.get("nik"),
-    name: formData.get("name"),
-    birth_place: formData.get("birth_place"),
-    birth_date: formData.get("birth_date"),
-    gender: formData.get("gender"),
-    family_status: formData.get("family_status"),
-    job: formData.get("job"),
-    education: formData.get("education"),
-    phone: formData.get("phone"),
-    child_order: formData.get("child_order")
-      ? Number(formData.get("child_order"))
-      : null,
-  };
-
-  db.prepare(
+  await db.query(
     `
     UPDATE members SET
-      nik = @nik, name = @name, birth_place = @birth_place, birth_date = @birth_date,
-      gender = @gender, family_status = @family_status, job = @job, education = @education,
-      phone = @phone, child_order = @child_order,
-      updated_at = datetime('now', 'localtime')
-    WHERE id = @id
+      nik = $1, name = $2, birth_place = $3, birth_date = $4,
+      gender = $5, family_status = $6, job = $7, education = $8,
+      phone = $9, child_order = $10,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $11
   `,
-  ).run(data);
+    [
+      formData.get("nik"),
+      formData.get("name"),
+      formData.get("birth_place"),
+      formData.get("birth_date") || null,
+      formData.get("gender"),
+      formData.get("family_status"),
+      formData.get("job"),
+      formData.get("education"),
+      formData.get("phone"),
+      formData.get("child_order") ? Number(formData.get("child_order")) : null,
+      id,
+    ]
+  );
 
   revalidatePath(`/families/${familyId}`);
   revalidatePath("/");
@@ -238,7 +272,7 @@ export async function updateMember(id, familyId, formData) {
 
 export async function deleteMember(id, familyId) {
   const db = getDb();
-  db.prepare("DELETE FROM members WHERE id = ?").run(id);
+  await db.query("DELETE FROM members WHERE id = $1", [id]);
   revalidatePath(`/families/${familyId}`);
   revalidatePath("/");
 }
@@ -249,93 +283,79 @@ export async function searchMembers(query) {
   if (!query) return [];
   const db = getDb();
   const pattern = `%${query}%`;
-  return db
-    .prepare(
-      `
+  const res = await db.query(
+    `
     SELECT m.*, f.family_name, f.head_name
     FROM members m
     JOIN families f ON f.id = m.family_id
-    WHERE m.name LIKE ? OR m.nik LIKE ?
+    WHERE m.name ILIKE $1 OR m.nik ILIKE $2
     ORDER BY m.name ASC
     LIMIT 50
   `,
-    )
-    .all(pattern, pattern);
+    [pattern, pattern]
+  );
+  return res.rows;
 }
 
 // ─── STATS ──────────────────────────────────────────────────
 
 export async function getStats() {
   const db = getDb();
-  const familyCount = db
-    .prepare("SELECT COUNT(*) as count FROM families")
-    .get().count;
-  const memberCount = db
-    .prepare("SELECT COUNT(*) as count FROM members")
-    .get().count;
+
+  const familyCountRes = await db.query(
+    "SELECT COUNT(*)::int as count FROM families"
+  );
+  const familyCount = familyCountRes.rows[0].count;
+
+  const memberCountRes = await db.query(
+    "SELECT COUNT(*)::int as count FROM members"
+  );
+  const memberCount = memberCountRes.rows[0].count;
 
   const totalPeople = familyCount + memberCount;
 
-  const peopleByGenderRows = db
-    .prepare(
-      `
-      SELECT gender, COUNT(*) as count
-      FROM (
-        SELECT COALESCE(NULLIF(head_gender, ''), 'Tidak diketahui') as gender FROM families
-        UNION ALL
-        SELECT COALESCE(NULLIF(gender, ''), 'Tidak diketahui') as gender FROM members
-      )
-      GROUP BY gender
-      ORDER BY count DESC
-    `,
-    )
-    .all();
+  const genderRes = await db.query(`
+    SELECT COALESCE(NULLIF(gender, ''), 'Tidak diketahui') as gender, COUNT(*)::int as count
+    FROM (
+      SELECT head_gender as gender FROM families
+      UNION ALL
+      SELECT gender FROM members
+    ) sub
+    GROUP BY gender
+    ORDER BY count DESC
+  `);
 
-  const educationRows = db
-    .prepare(
-      `
-      SELECT education, COUNT(*) as count
-      FROM (
-        SELECT COALESCE(NULLIF(head_education, ''), 'Tidak diketahui') as education FROM families
-        UNION ALL
-        SELECT COALESCE(NULLIF(education, ''), 'Tidak diketahui') as education FROM members
-      )
-      GROUP BY education
-      ORDER BY count DESC
-    `,
-    )
-    .all();
+  const educationRes = await db.query(`
+    SELECT COALESCE(NULLIF(education, ''), 'Tidak diketahui') as education, COUNT(*)::int as count
+    FROM (
+      SELECT head_education as education FROM families
+      UNION ALL
+      SELECT education FROM members
+    ) sub
+    GROUP BY education
+    ORDER BY count DESC
+  `);
 
-  const familyStatusRows = db
-    .prepare(
-      `
-      SELECT family_status as status, COUNT(*) as count
-      FROM members
-      GROUP BY family_status
-      ORDER BY count DESC
-    `,
-    )
-    .all();
+  const statusRes = await db.query(`
+    SELECT family_status as status, COUNT(*)::int as count
+    FROM members
+    GROUP BY family_status
+    ORDER BY count DESC
+  `);
 
-  const recentFamilyCount = db
-    .prepare(
-      `
-      SELECT COUNT(*) as count
-      FROM families
-      WHERE datetime(created_at) >= datetime('now', '-30 day', 'localtime')
-    `,
-    )
-    .get().count;
+  const recentFamiliesRes = await db.query(`
+    SELECT COUNT(*)::int as count
+    FROM families
+    WHERE created_at >= NOW() - INTERVAL '30 days'
+  `);
+  const recentFamilyCount = recentFamiliesRes.rows[0].count;
 
-  const recentMemberCount = db
-    .prepare(
-      `
-      SELECT COUNT(*) as count
-      FROM members
-      WHERE datetime(created_at) >= datetime('now', '-30 day', 'localtime')
-    `,
-    )
-    .get().count;
+  const recentMembersRes = await db.query(`
+    SELECT COUNT(*)::int as count
+    FROM members
+    WHERE created_at >= NOW() - INTERVAL '30 days'
+  `);
+  const recentMemberCount = recentMembersRes.rows[0].count;
 
   const averagePeoplePerFamily =
     familyCount > 0 ? Number((totalPeople / familyCount).toFixed(2)) : 0;
@@ -345,9 +365,9 @@ export async function getStats() {
     memberCount,
     totalPeople,
     averagePeoplePerFamily,
-    peopleByGender: peopleByGenderRows,
-    educationStats: educationRows,
-    familyStatusStats: familyStatusRows,
+    peopleByGender: genderRes.rows,
+    educationStats: educationRes.rows,
+    familyStatusStats: statusRes.rows,
     recentFamilyCount,
     recentMemberCount,
   };
