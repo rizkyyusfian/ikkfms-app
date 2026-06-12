@@ -780,13 +780,15 @@ const families = [
 
 async function main() {
   console.log("Cleaning up database...");
-  await prisma.member.deleteMany({});
-  await prisma.family.deleteMany({});
-  await prisma.user.deleteMany({});
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "members", "families", "users" RESTART IDENTITY CASCADE;`);
 
   console.log("Seeding admin user...");
-  const adminUsername = process.env.ADMIN_USERNAME || "admin";
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin";
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminUsername || !adminPassword) {
+    throw new Error("ADMIN_USERNAME and ADMIN_PASSWORD environment variables are required.");
+  }
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   await prisma.user.create({
