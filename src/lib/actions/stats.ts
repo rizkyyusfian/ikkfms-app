@@ -4,47 +4,73 @@ import { prisma } from "@/lib/prisma";
 import { DashboardStats } from "@/types";
 
 export async function getStats(): Promise<DashboardStats> {
-  const familyCount = await prisma.family.count();
-  const memberCount = await prisma.member.count();
-  const totalPeople = familyCount + memberCount;
-
-  const averagePeoplePerFamily =
-    familyCount > 0 ? Number((totalPeople / familyCount).toFixed(2)) : 0;
-
   // Recent creations in last 30 days
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const recentFamilyCount = await prisma.family.count({
-    where: {
-      createdAt: {
-        gte: thirtyDaysAgo,
+  const [
+    familyCount,
+    memberCount,
+    recentFamilyCount,
+    recentMemberCount,
+    familiesGenders,
+    membersGenders,
+    familiesEducation,
+    membersEducation,
+    membersStatus,
+  ] = await Promise.all([
+    prisma.family.count(),
+    prisma.member.count(),
+    prisma.family.count({
+      where: {
+        createdAt: {
+          gte: thirtyDaysAgo,
+        },
       },
-    },
-  });
-
-  const recentMemberCount = await prisma.member.count({
-    where: {
-      createdAt: {
-        gte: thirtyDaysAgo,
+    }),
+    prisma.member.count({
+      where: {
+        createdAt: {
+          gte: thirtyDaysAgo,
+        },
       },
-    },
-  });
+    }),
+    prisma.family.groupBy({
+      by: ['headGender'],
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.member.groupBy({
+      by: ['gender'],
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.family.groupBy({
+      by: ['headEducation'],
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.member.groupBy({
+      by: ['education'],
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.member.groupBy({
+      by: ['familyStatus'],
+      _count: {
+        id: true,
+      },
+    }),
+  ]);
 
-  // Genders (heads and members)
-  const familiesGenders = await prisma.family.groupBy({
-    by: ['headGender'],
-    _count: {
-      id: true
-    }
-  });
+  const totalPeople = familyCount + memberCount;
 
-  const membersGenders = await prisma.member.groupBy({
-    by: ['gender'],
-    _count: {
-      id: true
-    }
-  });
+  const averagePeoplePerFamily =
+    familyCount > 0 ? Number((totalPeople / familyCount).toFixed(2)) : 0;
 
   const genderCounts: Record<string, number> = {
     "Laki-laki": 0,
@@ -67,21 +93,6 @@ export async function getStats(): Promise<DashboardStats> {
     .map(([gender, count]) => ({ gender, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Education breakdown (heads and members)
-  const familiesEducation = await prisma.family.groupBy({
-    by: ['headEducation'],
-    _count: {
-      id: true
-    }
-  });
-
-  const membersEducation = await prisma.member.groupBy({
-    by: ['education'],
-    _count: {
-      id: true
-    }
-  });
-
   const educationCounts: Record<string, number> = {};
   familiesEducation.forEach(e => {
     const key = e.headEducation || "Tidak diketahui";
@@ -96,14 +107,6 @@ export async function getStats(): Promise<DashboardStats> {
   const educationStats = Object.entries(educationCounts)
     .map(([education, count]) => ({ education, count }))
     .sort((a, b) => b.count - a.count);
-
-  // Family status breakdown (members only)
-  const membersStatus = await prisma.member.groupBy({
-    by: ['familyStatus'],
-    _count: {
-      id: true
-    }
-  });
 
   const familyStatusStats = membersStatus.map(s => {
     let statusLabel = s.familyStatus as string;

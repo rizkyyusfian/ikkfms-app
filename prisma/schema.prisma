@@ -61,6 +61,8 @@ model Family {
 
   members        Member[]
 
+  @@index([familyName])
+  @@index([headName])
   @@map("families")
 }
 
@@ -82,5 +84,8 @@ model Member {
 
   family       Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
 
+  @@index([familyId])
+  @@index([name])
+  @@index([nik])
   @@map("members")
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Gender, Education } from "@prisma/client";
 import { FamilyWithMembers } from "@/types";
+import { cache } from "react";
 
 // Helper for validating NIK
 function validateNik(nik: string): boolean {
@@ -82,7 +83,7 @@ export async function getFamiliesWithMembers(search = ""): Promise<FamilyWithMem
   return families;
 }
 
-export async function getFamily(id: number): Promise<FamilyWithMembers | null> {
+export const getFamily = cache(async (id: number): Promise<FamilyWithMembers | null> => {
   const family = await prisma.family.findUnique({
     where: { id },
     include: {
@@ -91,7 +92,7 @@ export async function getFamily(id: number): Promise<FamilyWithMembers | null> {
   });
 
   return family;
-}
+});
 
 export async function createFamily(prevState: any, formData: FormData) {
   const familyName = formData.get("family_name")?.toString().trim();
