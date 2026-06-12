@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Gender {
+  LAKI_LAKI @map("Laki-laki")
+  PEREMPUAN @map("Perempuan")
+}
+
+enum Education {
+  SD
+  SMP
+  SMA
+  SMK
+  D3
+  S1
+  S2
+  S3
+  LAINNYA
+}
+
+enum FamilyStatus {
+  ISTRI     @map("Istri")
+  ANAK      @map("Anak")
+  CUCU      @map("Cucu")
+  MENANTU   @map("Menantu")
+  ORANG_TUA @map("Orang Tua")
+  LAINNYA   @map("Lainnya")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Family {
+  id             Int        @id @default(autoincrement())
+  familyName     String     @map("family_name")
+  headNik        String     @unique @map("head_nik")
+  headName       String     @map("head_name")
+  headBirthPlace String?    @map("head_birth_place")
+  headBirthDate  DateTime?  @map("head_birth_date") @db.Date
+  headGender     Gender     @default(LAKI_LAKI) @map("head_gender")
+  headJob        String?    @map("head_job")
+  headEducation  Education? @map("head_education")
+  headPhone      String?    @map("head_phone")
+  homeAddress    String?    @map("home_address")
+  wifeName       String?    @map("wife_name")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  members        Member[]
+
+  @@map("families")
+}
+
+model Member {
+  id           Int          @id @default(autoincrement())
+  familyId     Int          @map("family_id")
+  nik          String
+  name         String
+  birthPlace   String?      @map("birth_place")
+  birthDate    DateTime?    @map("birth_date") @db.Date
+  gender       Gender?
+  familyStatus FamilyStatus @default(ANAK) @map("family_status")
+  job          String?
+  education    Education?
+  phone        String?
+  childOrder   Int?         @map("child_order")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  family       Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("members")
+}

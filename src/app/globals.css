@@ -3,55 +3,78 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAF9F6;
+  --surface: #FFFFFF;
+  --border: #E5E2DC;
+  --text-primary: #1C1B1A;
+  --text-secondary: #6B6963;
+  --accent-primary: #0F6E56;
+  --accent-primary-hover: #0B5A45;
+  --accent-secondary: #B45309;
+  --danger: #DC2626;
+  --success: #16A34A;
 }
 
-@theme inline {
+.dark {
+  --background: #18181B;
+  --surface: #27272A;
+  --border: #3F3F46;
+  --text-primary: #FAFAF9;
+  --text-secondary: #A1A1AA;
+  --accent-primary: #5DCAA5;
+  --accent-primary-hover: #7BDAB8;
+  --accent-secondary: #F0A857;
+  --danger: #F87171;
+  --success: #4ADE80;
+}
+
+@theme {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-zinc-850: #1e1e24;
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-primary-hover: var(--accent-primary-hover);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-.dark {
-  --background: #1a1a20;
-  --foreground: #ededed;
-}
-
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-/* Shared utility classes */
+/* Shared utility classes matching modern design system */
 .label {
-  @apply block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1;
+  @apply block text-sm font-medium text-text-secondary mb-1;
 }
 
 .input-field {
-  @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm transition-colors;
-  @apply focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500;
-  @apply dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100;
+  @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm transition-colors;
+  @apply focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary;
+  @apply text-text-primary;
 }
 
 .btn-primary {
-  @apply rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm;
-  @apply hover:bg-blue-700 transition-colors;
+  @apply rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white shadow-sm cursor-pointer;
+  @apply hover:bg-accent-primary-hover transition-colors;
 }
 
 .btn-secondary {
-  @apply rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm;
-  @apply hover:bg-zinc-50 transition-colors;
-  @apply dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700;
+  @apply rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary shadow-sm cursor-pointer;
+  @apply hover:bg-background transition-colors;
 }
 
 .th {
-  @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400;
+  @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary border-b border-border;
 }
 
 .td {
-  @apply whitespace-nowrap px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300;
+  @apply whitespace-nowrap px-4 py-3 text-sm text-text-primary border-b border-border;
 }
